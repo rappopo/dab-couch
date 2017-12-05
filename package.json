@@ -1,10 +1,10 @@
 {
   "name": "@rappopo/dab-couch",
   "version": "0.0.1",
-  "description": "A CouchDB DAL that smells!",
+  "description": "A CouchDB data access layer that smells!",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha --exit"
   },
   "keywords": [
     "dab",
@@ -17,6 +17,7 @@
   "author": "Ardhi Lukianto <ardhi@lukianto.com>",
   "license": "MIT",
   "dependencies": {
+    "@rappopo/dab": "0.0.1",
     "nano": "^6.4.2"
   },
   "devDependencies": {
