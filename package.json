@@ -1,0 +1,29 @@
+{
+  "name": "@rappopo/dab-couch",
+  "version": "0.0.1",
+  "description": "A CouchDB DAL that smells!",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "dab",
+    "dab-couch",
+    "couchdb",
+    "data",
+    "access",
+    "dal"
+  ],
+  "author": "Ardhi Lukianto <ardhi@lukianto.com>",
+  "license": "MIT",
+  "dependencies": {
+    "nano": "^6.4.2"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "chai-shallow-deep-equal": "^1.4.6",
+    "chai-subset": "^1.6.0",
+    "lodash": "^4.17.4"
+  }
+}
