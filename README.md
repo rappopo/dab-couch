@@ -1,5 +1,54 @@
 # @rappopo/dab-couch
 
+A [Rappopo DAB](https://github.com/rappopo/dab) implementation for CouchDB 2.0 and above.
+
+## Installation
+
+Simply invoke this command in your project folder:
+
+	$ npm install --save @rappopo/dab-couch
+
+And within your script:
+
+	const DabCouch = require('@rappopo/dab-couch')
+	const dab = new DabCouch({
+		url: 'http://localhost:5984',
+		dbName: 'mydb'
+	})
+	...
+	dab.findOne('my-doc').then(function(doc) { ... })
+
+## Options
+
+`url`: your CouchDB url endpoint. If it not provided, it defauts to: *http://localhost:5984*
+
+`dbName`: the database name to connect to. Defaults to to *test*
+
+`retainOnRemove`: array of columns to retain when a document is deleted. Default: []. 
+
+When CouchDB delete a document, it actually PUTs a document with content like this:
+
+	{
+		"_id": "<doc_id>",
+		"_rev": "<rev_id>",
+		"_deleted": true
+	}
+
+But sometimes you want to also have some columns to be put on that deleted document. The `retainOnRemove` simply left those columns intact, e.g:
+
+	{
+		"_id": "<doc_id>",
+		"_rev": "<rev_id>",		
+		"_deleted": true,
+		"type": "ADDRESS"
+	}
+
+## Misc
+
+* [Methods](https://github.com/rappopo/dab)
+* [ChangeLog](CHANGELOG.md)
+* Donation: Bitcoin **16HVCkdaNMvw3YdBYGHbtt3K5bmpRmH74Y**
+
 ## License
 
 (The MIT License)
