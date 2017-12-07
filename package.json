@@ -1,6 +1,6 @@
 {
   "name": "@rappopo/dab-couch",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A CouchDB data access layer that smells!",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,7 @@
   "author": "Ardhi Lukianto <ardhi@lukianto.com>",
   "license": "MIT",
   "dependencies": {
-    "@rappopo/dab": "0.0.3",
+    "@rappopo/dab": "0.0.4",
     "nano": "^6.4.2",
     "uuid": "^3.1.0"
   },
