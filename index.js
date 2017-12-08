@@ -1,7 +1,6 @@
 'use strict'
 
 const nano = require('nano'),
-  uuid = require('uuid/v4'),
   Dab = require('@rappopo/dab')
 
 class DabCouch extends Dab {
@@ -197,7 +196,7 @@ class DabCouch extends Dab {
         return reject(new Error('Require array'))
       this._.each(body, (b, i) => {
         if (!b[this.options.idSrc])
-          b[this.options.idSrc] = uuid()
+          b[this.options.idSrc] = this.uuid()
         body[i] = this._.omit(b, ['_rev', '_deleted'])
       })
       const keys = this._(body).map(this.options.idSrc).value()
@@ -217,7 +216,7 @@ class DabCouch extends Dab {
             let stat = { success: r.ok ? true : false }
             stat[this.options.idDest] = r.id
             if (!stat.success)
-              stat.reason = info[i] && info[i].value ? 'Exists' : this._.upperFirst(r.name)
+              stat.message = info[i] && info[i].value ? 'Exists' : this._.upperFirst(r.name)
             else
               ok++
             status.push(stat)
@@ -245,7 +244,7 @@ class DabCouch extends Dab {
         return reject(new Error('Require array'))
       this._.each(body, (b, i) => {
         if (!b[this.options.idSrc])
-          b[this.options.idSrc] = uuid() // will likely to introduce 'not-found'
+          b[this.options.idSrc] = this.uuid() // will likely to introduce 'not-found'
         body[i] = this._.omit(b, ['_rev', '_deleted'])
       })
       const keys = this._(body).map(this.options.idSrc).value()
@@ -260,7 +259,7 @@ class DabCouch extends Dab {
           if (info[i] && info[i].value) 
             body[i]._rev = info[i].value.rev
           else
-            body[i]._rev = '1-' + uuid() // will introduce purposed conflict
+            body[i]._rev = '1-' + this.uuid() // will introduce purposed conflict
         })
         this.client.bulk({ docs: body }, (err, result) => {
           if (err)
@@ -270,7 +269,7 @@ class DabCouch extends Dab {
             let stat = { success: r.ok ? true : false }
             stat[this.options.idDest] = r.id
             if (!stat.success)
-              stat.reason = info[i] && info[i].error === 'not_found' ? 'Not found' : this._.upperFirst(r.name)
+              stat.message = info[i] && info[i].error === 'not_found' ? 'Not found' : this._.upperFirst(r.name)
             else
               ok++
             status.push(stat)
@@ -296,27 +295,26 @@ class DabCouch extends Dab {
     return new Promise((resolve, reject) => {
       if (!this._.isArray(body))
         return reject(new Error('Require array'))
-      this._.each(body, (b, i) => {
-        if (!b[this.options.idSrc])
-          b[this.options.idSrc] = uuid() // will likely to introduce 'not-found'
-        body[i] = this._.omit(b, ['_rev', '_deleted'])
-      })
-      const keys = this._(body).map(this.options.idSrc).value()
       this.client.fetch({
-        keys: keys
+        keys: body
+      }, {
+        include_docs: true
       }, (err, result) => {
         if (err)
           return reject(err)
         let info = result.rows
         // add rev for known doc
         this._.each(body, (b, i) => {
-          let newB = this._.pick(b, this.options.retainOnRemove)
-          newB._deleted = true
-          newB._id = b._id
-          if (info[i] && info[i].value) 
+          let newB = {
+            _deleted: true,
+            _id: b
+          }
+          if (info[i] && info[i].value) {
             newB._rev = info[i].value.rev
-          else
-            newB._rev = '1-' + uuid() // will introduce purposed conflict
+            newB = this._.merge(newB, this._.pick(info[i].value.doc, this.options.retainOnRemove))
+          } else {
+            newB._rev = '1-' + this.uuid() // will introduce purposed conflict
+          }
           body[i] = newB
         })
         this.client.bulk({ docs: body }, (err, result) => {
@@ -327,7 +325,7 @@ class DabCouch extends Dab {
             let stat = { success: r.ok ? true : false }
             stat[this.options.idDest] = r.id
             if (!stat.success)
-              stat.reason = info[i] && info[i].error === 'not_found' ? 'Not found' : this._.upperFirst(r.name)
+              stat.message = info[i] && info[i].error === 'not_found' ? 'Not found' : this._.upperFirst(r.name)
             else
               ok++
             status.push(stat)
