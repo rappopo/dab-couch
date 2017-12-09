@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.7
+
+* withDetail params in all bulk methods
+* Updated to @rappopo/dab@0.0.6 to have copyFrom & copyTo for free 
+
 ## 0.0.5
 
 * Spec changed on bulkRemove

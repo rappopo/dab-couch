@@ -8,6 +8,10 @@ module.exports = {
     url: 'http://localhost:5984',
     dbName: 'test'
   },
+  options1: {
+    url: 'http://localhost:5984',
+    dbName: 'test1'
+  },
   dummyData: [
     { _id: 'jack-bauer', name: 'Jack Bauer' },
     { _id: 'james-bond', name: 'James Bond' }
@@ -28,7 +32,18 @@ module.exports = {
         let db = nano.db.use(me.options.dbName)
         db.bulk({ docs: me.dummyData }, function (err, body) {
           if (err) return callback(err)
-          callback()
+          // for copyFrom & copyTo
+          nano.db.destroy(me.options1.dbName, function (err, body) {
+            if (err && err.statusCode !== 404) return callback(err)
+            nano.db.create(me.options1.dbName, function (err, body) {
+              if (err) return callback(err)
+              let db = nano.db.use(me.options1.dbName)
+              db.bulk({ docs: me.dummyData }, function (err, body) {
+                if (err) return callback(err)
+                callback()
+              })
+            })
+          })
         })
       })
     })

@@ -227,9 +227,10 @@ class DabCouch extends Dab {
               ok: ok,
               fail: body.length - ok,
               total: body.length
-            },
-            data: status
+            }
           }
+          if (params.withDetail)
+            data.detail = status
           resolve(data)
         })    
       })
@@ -280,9 +281,10 @@ class DabCouch extends Dab {
               ok: ok,
               fail: body.length - ok,
               total: body.length
-            },
-            data: status
+            }
           }
+          if (params.withDetail)
+            data.detail = status
           resolve(data)
         })    
       })
@@ -295,6 +297,9 @@ class DabCouch extends Dab {
     return new Promise((resolve, reject) => {
       if (!this._.isArray(body))
         return reject(new Error('Require array'))
+      this._.each(body, (b, i) => {
+        body[i] = b || this.uuid()
+      })
       this.client.fetch({
         keys: body
       }, {
@@ -336,9 +341,10 @@ class DabCouch extends Dab {
               ok: ok,
               fail: body.length - ok,
               total: body.length
-            },
-            data: status
+            }
           }
+          if (params.withDetail)
+            data.detail = status
           resolve(data)
         })    
       })
