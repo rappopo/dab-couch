@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.8
+
+* Updated to @rappopo/dab@0.0.8
+
 ## 0.0.7
 
 * Updated to @rappopo/dab@0.0.7
