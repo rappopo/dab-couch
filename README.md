@@ -53,20 +53,20 @@ But sometimes you want to also have some columns to be put on that deleted docum
 
 ## Features
 
-* [x] [find](https://github.com/rappopo/dab/blob/master/doc/FIND.md)
-* [x] [findOne](https://github.com/rappopo/dab/blob/master/doc/FINDONE.md)
-* [x] [create](https://github.com/rappopo/dab/blob/master/doc/CREATE.md)
-* [x] [update](https://github.com/rappopo/dab/blob/master/doc/UPDATE.md)
-* [x] [remove](https://github.com/rappopo/dab/blob/master/doc/REMOVE.md)
-* [x] [bulkCreate](https://github.com/rappopo/dab/blob/master/doc/BULKCREATE.md)
-* [x] [bulkUpdate](https://github.com/rappopo/dab/blob/master/doc/BULKUPDATE.md)
-* [x] [bulkDelete](https://github.com/rappopo/dab/blob/master/doc/BULKDELETE.md)
-* [x] [copyFrom](https://github.com/rappopo/dab/blob/master/doc/COPYFROM.md)
-* [x] [copyTo](https://github.com/rappopo/dab/blob/master/doc/COPYTO.md)
+* [x] [find](https://docs.rappopo.com/dab/method/find/)
+* [x] [findOne](https://docs.rappopo.com/dab/method/find-one/)
+* [x] [create](https://docs.rappopo.com/dab/method/create/)
+* [x] [update](https://docs.rappopo.com/dab/method/update/)
+* [x] [remove](https://docs.rappopo.com/dab/method/remove/)
+* [x] [bulkCreate](https://docs.rappopo.com/dab/method/bulk-create/)
+* [x] [bulkUpdate](https://docs.rappopo.com/dab/method/bulk-update/)
+* [x] [bulkRemove](https://docs.rappopo.com/dab/method/bulk-remove/)
+* [x] [copyFrom](https://docs.rappopo.com/dab/method/copy-from/)
+* [x] [copyTo](https://docs.rappopo.com/dab/method/copy-to/)
 
 ## Misc
 
-* [Methods](https://github.com/rappopo/dab)
+* [@rappopo/dab](https://github.com/rappopo/dab)
 * [ChangeLog](CHANGELOG.md)
 * Donation: Bitcoin **16HVCkdaNMvw3YdBYGHbtt3K5bmpRmH74Y**
 

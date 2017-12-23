@@ -26,9 +26,8 @@ describe('remove', function () {
 
   it('should return the value before removed', function () {
     const cls = new Cls(lib.options)
-    let key = lib.options.idDest || '_id',
-      val = { 'source.name': 'James Bond' }
-    val['source.' + key] = 'james-bond'
+    let val = { 'source.name': 'James Bond' }
+    val['source._id'] = 'james-bond'
     return expect(cls.remove(id, { withSource: true })).to.eventually.nested.include(val)
   })
 

@@ -13,19 +13,8 @@ describe('setOptions', function () {
   it('should return the default options', function () {
     const cls = new Cls()
     expect(cls.options).to.include({
-      idSrc: '_id',
-      idDest: '_id',
       url: 'http://localhost:5984',
       dbName: 'test'
-    })
-  })
-
-  it('should return options with custom idDest', function () {
-    const cls = new Cls({ 
-      idDest: 'uid'
-    })
-    expect(cls.options).to.include({
-      idDest: 'uid'
     })
   })
 
