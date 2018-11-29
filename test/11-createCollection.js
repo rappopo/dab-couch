@@ -38,7 +38,7 @@ describe('createCollection', function () {
 
   it('should rebuild schema and indexes', function (done) {
     const cls = new Cls(lib.options)
-    cls.createCollection(lib.schemaFull, { rebuildSchema: true })
+    cls.createCollection(lib.schemaFull, { rebuild: true })
       .then(result => {
         expect(result).to.equal(true)
         done()

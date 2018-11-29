@@ -36,7 +36,7 @@ describe('removeCollection', function () {
     const cls = new Cls(lib.options)
     cls.createCollection(lib.schemaFull)
       .then(result => {
-        return cls.removeCollection(lib.schemaFull.name, { purge: true })
+        return cls.removeCollection(lib.schemaFull.name, { drop: true })
       })
       .then(result => {
         expect(result).to.equal(true)

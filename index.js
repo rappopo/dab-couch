@@ -28,12 +28,12 @@ class DabCouch extends Dab {
     return new Promise((resolve, reject) => {
       let rebuild = !this._.isEmpty(this.collection[coll].attributes)
       if (!rebuild) return resolve(true)
-      this.nano.db.get(coll)
-        .then(result => {
-          return this.nano.db.destroy(coll)
-        })
+      this._dropDb(coll)
         .then(result => {
           return this.nano.db.create(coll)
+        })
+        .then(result => {
+          return this._rebuildIndex(coll)
         })
         .then(result => {
           resolve(true)
@@ -83,23 +83,34 @@ class DabCouch extends Dab {
         .then(result => {
           resolve(true)
         })
-        .catch(e => {
-          console.log(e)
-          reject(e)
-        })
+        .catch(reject)
+    })
+  }
+
+  _dropDb (coll) {
+    return new Promise((resolve, reject) => {
+      this.nano.db.get(coll, (e, i) => {
+        if (e && e.statusCode !== 404) return reject(e)
+        Promise.resolve(true)
+          .then(_ => {
+            if (i) return this.nano.db.destroy(coll)
+            return true
+          })
+          .then(result => {
+            resolve(true)
+          })
+          .catch(reject)
+      })
     })
   }
 
   createCollection (coll, params) {
     params = params || {}
-    if (params.rebuildSchema) params.rebuildIndex = params.rebuildSchema
     return new Promise((resolve, reject) => {
       super.createCollection(coll)
         .then(result => {
-          return this._rebuildSchema(coll.name)
-        })
-        .then(result => {
-          return this._rebuildIndex(coll.name)
+          if (params.rebuild) return this._rebuildSchema(coll.name)
+          return true
         })
         .then(result => {
           let e = this.setClient({ collection: coll.name })
@@ -117,12 +128,12 @@ class DabCouch extends Dab {
 
   removeCollection (name, params) {
     params = params || {}
-    let purge = params.purge && this.collection[name]
+    let drop = params.drop && this.collection[name]
     return new Promise((resolve, reject) => {
       super.removeCollection(name)
         .then(result => {
-          if (!purge) return true
-          return this.nano.db.destroy(name)
+          if (!drop) return true
+          return this._dropDb(name)
         })
         .then(result => {
           delete this.client[name]
