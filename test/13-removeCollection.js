@@ -31,4 +31,16 @@ describe('removeCollection', function () {
         done()
       })
   })
+
+  it('should also purge its database', function (done) {
+    const cls = new Cls(lib.options)
+    cls.createCollection(lib.schemaFull)
+      .then(result => {
+        return cls.removeCollection(lib.schemaFull.name, { purge: true })
+      })
+      .then(result => {
+        expect(result).to.equal(true)
+        done()
+      })
+  })
 })

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+* Adding rebuildSchema to createCollection
+* Adding purge to removeCollection
+
 ## 0.6.0
 
 * Updated to @rappopo/dab@0.6.9

@@ -1,7 +1,7 @@
 {
   "name": "@rappopo/dab-couch",
-  "version": "0.6.0",
-  "description": "A CouchDB data access layer that smells!",
+  "version": "0.6.1",
+  "description": "CouchDB 2.x data access layer for Rappopo DAB",
   "main": "index.js",
   "scripts": {
     "test": "mocha --exit"

@@ -20,6 +20,10 @@ module.exports = {
       _id: 'string',
       name: 'string',
       age: 'integer'
+    },
+    indexes: {
+      name: true,
+      age: true
     }
   },
   schemaHidden: {

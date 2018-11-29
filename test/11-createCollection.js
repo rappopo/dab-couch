@@ -35,4 +35,13 @@ describe('createCollection', function () {
         done()
       })
   })
+
+  it('should rebuild schema and indexes', function (done) {
+    const cls = new Cls(lib.options)
+    cls.createCollection(lib.schemaFull, { rebuildSchema: true })
+      .then(result => {
+        expect(result).to.equal(true)
+        done()
+      })
+  })
 })

@@ -24,12 +24,86 @@ class DabCouch extends Dab {
     this.client[params.collection] = this.nano.use(params.collection)
   }
 
+  _rebuildSchema (coll) {
+    return new Promise((resolve, reject) => {
+      let rebuild = !this._.isEmpty(this.collection[coll].attributes)
+      if (!rebuild) return resolve(true)
+      this.nano.db.get(coll)
+        .then(result => {
+          return this.nano.db.destroy(coll)
+        })
+        .then(result => {
+          return this.nano.db.create(coll)
+        })
+        .then(result => {
+          resolve(true)
+        })
+        .catch(reject)
+    })
+  }
+
+  _rebuildIndex (coll) {
+    return new Promise((resolve, reject) => {
+      let rebuild = !this._.isEmpty(this.collection[coll].indexes)
+      if (!rebuild) return resolve(true)
+      let indexes
+      this.nano.db.get(coll)
+        .then(result => {
+          return this.nano.request({
+            db: coll,
+            doc: '_index',
+            method: 'get'
+          })
+        })
+        .then(result => {
+          indexes = this._.filter(result.indexes, i => {
+            return i.name !== '_all_docs'
+          })
+          if (indexes.length === 0) return true
+          let proms = []
+          this._.each(indexes, i => {
+            proms.push(this.nano.request({
+              db: coll,
+              path: '/_index/' + i.ddoc + '/json/' + i.name,
+              method: 'delete'
+            }))
+          })
+          return Promise.all(proms)
+        })
+        .then(result => {
+          let proms = []
+          this._.forOwn(this.collection[coll].indexes, (v, k) => {
+            proms.push(this.nano.use(coll).createIndex({
+              name: k,
+              index: { fields: v.column }
+            }))
+          })
+          return Promise.all(proms)
+        })
+        .then(result => {
+          resolve(true)
+        })
+        .catch(e => {
+          console.log(e)
+          reject(e)
+        })
+    })
+  }
+
   createCollection (coll, params) {
     params = params || {}
+    if (params.rebuildSchema) params.rebuildIndex = params.rebuildSchema
     return new Promise((resolve, reject) => {
       super.createCollection(coll)
         .then(result => {
-          this.setClient({ collection: coll.name })
+          return this._rebuildSchema(coll.name)
+        })
+        .then(result => {
+          return this._rebuildIndex(coll.name)
+        })
+        .then(result => {
+          let e = this.setClient({ collection: coll.name })
+          if (e instanceof Error) return reject(e)
           resolve(result)
         })
         .catch(reject)
@@ -43,14 +117,12 @@ class DabCouch extends Dab {
 
   removeCollection (name, params) {
     params = params || {}
-    let rebuild = params.withSchema && this.collection[name] && !this._.isEmpty(this.collection[name].attributes)
+    let purge = params.purge && this.collection[name]
     return new Promise((resolve, reject) => {
       super.removeCollection(name)
         .then(result => {
-          if (!rebuild) {
-            delete this.client[name]
-          }
-          return resolve(true)
+          if (!purge) return true
+          return this.nano.db.destroy(name)
         })
         .then(result => {
           delete this.client[name]
