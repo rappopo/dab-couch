@@ -1,72 +1,126 @@
 'use strict'
 
-const nano = require('nano'),
-  Dab = require('@rappopo/dab')
+const nano = require('nano')
+const Dab = require('@rappopo/dab').Dab
 
 class DabCouch extends Dab {
   constructor (options) {
     super(options)
+    this.client = {}
   }
 
   setOptions (options) {
     super.setOptions(this._.merge(this.options, {
       url: options.url || 'http://localhost:5984',
-      dbName: options.dbName || 'test',
-      retainOnRemove: options.retainOnRemove || [],
+      retainOnRemove: options.retainOnRemove || []
     }))
+    this.nano = nano(this.options.url)
   }
 
   setClient (params) {
-    if (!this.client) {
-      this.nano = nano(this.options.url)
-      this.client = this.nano.use(this.options.dbName)
-    }
+    params = params || {}
+    if (this.client[params.collection]) return
+    if (this._.keys(this.collection).indexOf(params.collection) === -1) return new Error('Collection not found')
+    this.client[params.collection] = this.nano.use(params.collection)
+  }
+
+  createCollection (coll, params) {
+    params = params || {}
+    return new Promise((resolve, reject) => {
+      super.createCollection(coll)
+        .then(result => {
+          this.setClient({ collection: coll.name })
+          resolve(result)
+        })
+        .catch(reject)
+    })
+  }
+
+  renameCollection (oldName, newName, params) {
+    params = params || {}
+    return Promise.reject(new Error('Not implemented'))
+  }
+
+  removeCollection (name, params) {
+    params = params || {}
+    let rebuild = params.withSchema && this.collection[name] && !this._.isEmpty(this.collection[name].attributes)
+    return new Promise((resolve, reject) => {
+      super.removeCollection(name)
+        .then(result => {
+          if (!rebuild) {
+            delete this.client[name]
+          }
+          return resolve(true)
+        })
+        .then(result => {
+          delete this.client[name]
+          resolve(true)
+        })
+        .catch(reject)
+    })
   }
 
   find (params) {
     [params] = this.sanitize(params)
-    this.setClient(params)
-    let limit = params.limit || this.options.limit,
-      skip = ((params.page || 1) - 1) * limit,
-      sort = params.sort,
-      query = params.query || {}
-    return new Promise((resolve, reject) => {
-      this.nano.request({
-        db: this.options.dbName,
-        method: 'POST',
-        path: '_find',
-        body: {
-          selector: params.query || {},
-          limit: limit,
-          skip: skip,
-          sort: sort
-        }
-      }, (err, result) => {
-        if (err) {
-          if (err.error === 'bad_request' && err.reason === 'Referer header required.')
-            err = new Error('Unsupported')
-          return reject(err)
-        }
-        let data = { success: true, data: [] }
-        result.docs.forEach((d, i) => {
-          data.data.push(this.convertDoc(this._.merge(d, { _id: d._id })))
-        })
-        resolve(data)
+    let limit = params.limit || this.options.limit
+    let skip = ((params.page || 1) - 1) * limit
+    let query = params.query || {}
+
+    let sortKeys = this._.keys(params.sort) || []
+    if (sortKeys.length > 0) {
+      let qidx = {}
+      this._.each(sortKeys, k => {
+        qidx[k] = { $gte: null }
       })
+      query = this._.merge(query, qidx)
+    }
+
+    return new Promise((resolve, reject) => {
+      let e = this.setClient(params)
+      if (e instanceof Error) return reject(e)
+      let q = {
+        selector: query,
+        limit: limit,
+        skip: skip,
+        execution_stats: true
+      }
+      if (params.sort) {
+        let sort = []
+        this._.forOwn(params.sort, (v, k) => {
+          let o = {}
+          o[k] = v === -1 ? 'desc' : 'asc'
+          sort.push(o)
+        })
+        q.sort = sort
+      }
+      this.client[params.collection].find(q)
+        .then(result => {
+          let data = { success: true, data: [] }
+          result.docs.forEach((d, i) => {
+            data.data.push(this.convert(d, { collection: params.collection }))
+          })
+          resolve(data)
+        })
+        .catch(reject)
     })
   }
 
   _findOne (id, params, callback) {
-    this.client.get(id, params.options || {}, (err, result) => {
+    let e = this.setClient(params)
+    if (e instanceof Error) {
+      return callback(null, {
+        success: false,
+        err: e
+      })
+    }
+    this.client[params.collection].get(id, params.options || {}, (err, result) => {
       if (err) {
-        if (err.statusCode === 404)
-          err = new Error('Not found')
-        return callback({
+        return callback(null, {
           success: false,
-          err: err
+          err: err.statusCode === 404 ? new Error('Document not found') : err
         })
       }
-      callback({
+      callback(null, {
         success: true,
         data: result
       })
@@ -77,12 +131,11 @@ class DabCouch extends Dab {
     [params] = this.sanitize(params)
     this.setClient(params)
     return new Promise((resolve, reject) => {
-      this._findOne(id, params.options || {}, result => {
-        if (!result.success)
-          return reject(result.err)
+      this._findOne(id, params, (e, result) => {
+        if (!result.success) return reject(result.err)
         let data = {
           success: true,
-          data: this.convertDoc(result.data)
+          data: this.convert(result.data, { collection: params.collection })
         }
         resolve(data)
       })
@@ -90,50 +143,52 @@ class DabCouch extends Dab {
   }
 
   _create (body, params, callback) {
-    this.client.insert(body, params.options || {}, (err, result) => {
-      if (err)
-        return callback({
+    let e = this.setClient(params)
+    if (e instanceof Error) {
+      return callback(null, {
+        success: false,
+        err: e
+      })
+    }
+    this.client[params.collection].insert(body, params.options || {}, (err, result) => {
+      if (err) {
+        return callback(null, {
           success: false,
           err: err
         })
+      }
       this._findOne(result.id, params, callback)
     })
   }
 
   create (body, params) {
     [params, body] = this.sanitize(params, body)
-    this.setClient(params)
     return new Promise((resolve, reject) => {
       if (body._id) {
-        this._findOne(body._id, params, result => {
-          if (result.success) 
-            return reject(new Error('Exists'))
-          this._create(body, params, result => {
-            if (!result.success)
-              return reject(result.err)
-            result.data = this.convertDoc(result.data)
+        this._findOne(body._id, params, (e, result) => {
+          if (result.success) return reject(new Error('Document already exists'))
+          this._create(body, params, (e, result) => {
+            if (!result.success) return reject(result.err)
+            result.data = this.convert(result.data, { collection: params.collection })
             resolve(result)
           })
         })
       } else {
-        this._create(body, params, result => {
-          if (!result.success)
-            return reject(result.err)
-          result.data = this.convertDoc(result.data)
+        this._create(body, params, (e, result) => {
+          if (!result.success) return reject(result.err)
+          result.data = this.convert(result.data, { collection: params.collection })
           resolve(result)
-        })        
+        })
       }
     })
   }
 
   update (id, body, params) {
     [params, body] = this.sanitize(params, body)
-    this.setClient(params)
     body = this._.omit(body, ['_id'])
     return new Promise((resolve, reject) => {
-      this._findOne(id, params, result => {
-        if (!result.success)
-          return reject(result.err)
+      this._findOne(id, params, (e, result) => {
+        if (!result.success) return reject(result.err)
         let source = result.data
         if (params.fullReplace) {
           body._id = id
@@ -141,12 +196,10 @@ class DabCouch extends Dab {
         } else {
           body = this._.merge(result.data, body)
         }
-        this._create(body, params, result => {
-          if (!result.success)
-            return reject(result.err)
-          result.data = this.convertDoc(result.data)
-          if (params.withSource)
-            result.source = this.convertDoc(source)
+        this._create(body, params, (e, result) => {
+          if (!result.success) return reject(result.err)
+          result.data = this.convert(result.data, { collection: params.collection })
+          if (params.withSource) result.source = this.convert(source, { collection: params.collection })
           resolve(result)
         })
       })
@@ -157,27 +210,25 @@ class DabCouch extends Dab {
     [params] = this.sanitize(params)
     this.setClient(params)
     return new Promise((resolve, reject) => {
-      this._findOne(id, params, result => {
-        if (!result.success)
-          return reject(result.err)
-        let source = result.data,
-          newBody = {
-            _id: id,
-            _rev: source._rev,
-            _deleted: true
-          }
+      let e = this.setClient(params)
+      if (e instanceof Error) return reject(e)
+      this._findOne(id, params, (e, result) => {
+        if (!result.success) return reject(result.err)
+        let source = result.data
+        let newBody = {
+          _id: id,
+          _rev: source._rev,
+          _deleted: true
+        }
         this._.each(this.options.retainOnRemove, r => {
-          if (_.has(source, r))
-            newBody[r] = source[r]
+          if (this._.has(source, r)) newBody[r] = source[r]
         })
-        this.client.insert(newBody, params.options || {}, (err, result) => {
-          if (err)
-            return callback(result.err)
+        this.client[params.collection].insert(newBody, params.options || {}, (err, result) => {
+          if (err) return reject(result.err)
           let data = {
             success: true
           }
-          if (params.withSource)
-            data.source = this.convertDoc(source)
+          if (params.withSource) data.source = this.convert(source, { collection: params.collection })
           resolve(data)
         })
       })
@@ -185,36 +236,30 @@ class DabCouch extends Dab {
   }
 
   bulkCreate (body, params) {
-    [params] = this.sanitize(params)
-    this.setClient(params)
+    [params, body] = this.sanitize(params, body)
     return new Promise((resolve, reject) => {
-      if (!this._.isArray(body))
-        return reject(new Error('Require array'))
+      let e = this.setClient(params)
+      if (e instanceof Error) return reject(e)
+      if (!this._.isArray(body)) return reject(new Error('Requires an array'))
       this._.each(body, (b, i) => {
-        if (!b._id)
-          b._id = this.uuid()
+        if (!b._id) b._id = this.uuid()
         body[i] = this._.omit(b, ['_rev', '_deleted'])
       })
       const keys = this._(body).map('_id').value()
-
-
-      this.client.fetch({
+      this.client[params.collection].fetch({
         keys: keys
       }, (err, result) => {
-        if (err)
-          return reject(err)
+        if (err) return reject(err)
         let info = result.rows
-        this.client.bulk({ docs: body }, (err, result) => {
-          if (err)
-            return reject(err)
-          let ok = 0, status = []
+        this.client[params.collection].bulk({ docs: body }, (err, result) => {
+          if (err) return reject(err)
+          let ok = 0
+          let status = []
           this._.each(result, (r, i) => {
-            let stat = { success: r.ok ? true : false }
+            let stat = { success: Boolean(r.ok) }
             stat._id = r.id
-            if (!stat.success)
-              stat.message = info[i] && info[i].value ? 'Exists' : this._.upperFirst(r.name)
-            else
-              ok++
+            if (!stat.success) stat.message = info[i] && info[i].value ? 'Document already exists' : this._.upperFirst(r.name)
+            else ok++
             status.push(stat)
           })
           let data = {
@@ -225,50 +270,44 @@ class DabCouch extends Dab {
               total: body.length
             }
           }
-          if (params.withDetail)
-            data.detail = status
+          if (params.withDetail) data.detail = status
           resolve(data)
-        })    
+        })
       })
     })
   }
 
   bulkUpdate (body, params) {
-    [params] = this.sanitize(params)
+    [params, body] = this.sanitize(params, body)
     this.setClient(params)
     return new Promise((resolve, reject) => {
-      if (!this._.isArray(body))
-        return reject(new Error('Require array'))
+      let e = this.setClient(params)
+      if (e instanceof Error) return reject(e)
+      if (!this._.isArray(body)) return reject(new Error('Requires an array'))
       this._.each(body, (b, i) => {
-        if (!b._id)
-          b._id = this.uuid() // will likely to introduce 'not-found'
+        if (!b._id) b._id = this.uuid() // will likely to introduce 'not-found'
         body[i] = this._.omit(b, ['_rev', '_deleted'])
       })
       const keys = this._(body).map('_id').value()
-      this.client.fetch({
+      this.client[params.collection].fetch({
         keys: keys
       }, (err, result) => {
-        if (err)
-          return reject(err)
+        if (err) return reject(err)
         let info = result.rows
         // add rev for known doc
         this._.each(body, (b, i) => {
-          if (info[i] && info[i].value) 
-            body[i]._rev = info[i].value.rev
-          else
-            body[i]._rev = '1-' + this.uuid() // will introduce purposed conflict
+          if (info[i] && info[i].value) body[i]._rev = info[i].value.rev
+          else body[i]._rev = '1-' + this.uuid() // will introduce purposed conflict
         })
-        this.client.bulk({ docs: body }, (err, result) => {
-          if (err)
-            return reject(err)
-          let ok = 0, status = []
+        this.client[params.collection].bulk({ docs: body }, (err, result) => {
+          if (err) return reject(err)
+          let ok = 0
+          let status = []
           this._.each(result, (r, i) => {
-            let stat = { success: r.ok ? true : false }
+            let stat = { success: Boolean(r.ok) }
             stat._id = r.id
-            if (!stat.success)
-              stat.message = info[i] && info[i].error === 'not_found' ? 'Not found' : this._.upperFirst(r.name)
-            else
-              ok++
+            if (!stat.success) stat.message = info[i] && info[i].error === 'not_found' ? 'Document not found' : this._.upperFirst(r.name)
+            else ok++
             status.push(stat)
           })
           let data = {
@@ -279,30 +318,27 @@ class DabCouch extends Dab {
               total: body.length
             }
           }
-          if (params.withDetail)
-            data.detail = status
+          if (params.withDetail) data.detail = status
           resolve(data)
-        })    
+        })
       })
     })
   }
 
   bulkRemove (body, params) {
-    [params] = this.sanitize(params)
+    [params, body] = this.sanitize(params, body)
     this.setClient(params)
     return new Promise((resolve, reject) => {
-      if (!this._.isArray(body))
-        return reject(new Error('Require array'))
+      let e = this.setClient(params)
+      if (e instanceof Error) return reject(e)
+      if (!this._.isArray(body)) return reject(new Error('Requires an array'))
       this._.each(body, (b, i) => {
         body[i] = b || this.uuid()
       })
-      this.client.fetch({
+      this.client[params.collection].fetch({
         keys: body
-      }, {
-        include_docs: true
       }, (err, result) => {
-        if (err)
-          return reject(err)
+        if (err) return reject(err)
         let info = result.rows
         // add rev for known doc
         this._.each(body, (b, i) => {
@@ -318,17 +354,15 @@ class DabCouch extends Dab {
           }
           body[i] = newB
         })
-        this.client.bulk({ docs: body }, (err, result) => {
-          if (err)
-            return reject(err)
-          let ok = 0, status = []
+        this.client[params.collection].bulk({ docs: body }, (err, result) => {
+          if (err) return reject(err)
+          let ok = 0
+          let status = []
           this._.each(result, (r, i) => {
-            let stat = { success: r.ok ? true : false }
+            let stat = { success: Boolean(r.ok) }
             stat._id = r.id
-            if (!stat.success)
-              stat.message = info[i] && info[i].error === 'not_found' ? 'Not found' : this._.upperFirst(r.name)
-            else
-              ok++
+            if (!stat.success) stat.message = info[i] && info[i].error === 'not_found' ? 'Document not found' : this._.upperFirst(r.name)
+            else ok++
             status.push(stat)
           })
           let data = {
@@ -339,15 +373,12 @@ class DabCouch extends Dab {
               total: body.length
             }
           }
-          if (params.withDetail)
-            data.detail = status
+          if (params.withDetail) data.detail = status
           resolve(data)
-        })    
+        })
       })
     })
   }
-
-
 }
 
 module.exports = DabCouch

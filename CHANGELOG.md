@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0
+
+* Updated to @rappopo/dab@0.6.9
+* Standard JS compliance
+
 ## 0.0.9
 
 * Updated to @rappopo/dab@0.0.11
@@ -16,7 +21,7 @@
 ## 0.0.6
 
 * withDetail params in all bulk methods
-* Updated to @rappopo/dab@0.0.6 to have copyFrom & copyTo for free 
+* Updated to @rappopo/dab@0.0.6 to have copyFrom & copyTo for free
 
 ## 0.0.5
 
