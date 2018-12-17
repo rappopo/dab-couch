@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2
+
+* Updated to @rappopo/dab@0.6.10
+
 ## 0.6.1
 
 * Adding rebuild to createCollection
