@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.5
+
+* Remove debug code
+
+## 0.6.4
+
+* Updated to @rappopo/dab@0.6.11
+
 ## 0.6.2
 
 * Updated to @rappopo/dab@0.6.10
