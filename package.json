@@ -1,6 +1,6 @@
 {
   "name": "@rappopo/dab-couch",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "CouchDB 2.x data access layer for Rappopo DAB",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,7 @@
   "author": "Ardhi Lukianto <ardhi@lukianto.com>",
   "license": "MIT",
   "dependencies": {
-    "@rappopo/dab": "^0.6.12",
+    "@rappopo/dab": "^0.6.13",
     "nano": "^7.1.1"
   },
   "devDependencies": {
